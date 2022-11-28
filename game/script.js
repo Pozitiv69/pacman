@@ -1,6 +1,7 @@
 import map from './map.js';
 
 const canvas = document.querySelector('canvas');
+const scoreEl = document.querySelector('#scoreEl');
 const c = canvas.getContext('2d');
 
 canvas.width = innerWidth;
@@ -44,7 +45,58 @@ class Player {
   }
 }
 
+class Ghost {
+  constructor({ position, velocity, color = 'red' }) {
+    this.position = position;
+    this.velocity = velocity;
+    this.radius = 15;
+    this.color = color;
+  }
+
+  draw() {
+    c.beginPath();
+    c.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
+    c.fillStyle = this.color;
+    c.fill();
+    c.closePath();
+  }
+
+  update() {
+    this.draw();
+    this.position.x += this.velocity.x;
+    this.position.y += this.velocity.y;
+  }
+}
+
+class Pellet {
+  constructor({ position }) {
+    this.position = position;
+    this.radius = 3;
+  }
+
+  draw() {
+    c.beginPath();
+    c.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
+    c.fillStyle = 'white';
+    c.fill();
+    c.closePath();
+  }
+}
+
+const pellets = [];
 const boundaries = [];
+const ghosts = [
+  new Ghost({
+    position: {
+      x: Boundary.width * 9 + Boundary.width / 2,
+      y: Boundary.height + Boundary.height / 2,
+    },
+    velocity: {
+      x: 0,
+      y: 0,
+    },
+  }),
+];
 const player = new Player({
   position: {
     x: Boundary.width + Boundary.width / 2,
@@ -72,6 +124,7 @@ const keys = {
 };
 
 let lastKey = '';
+let score = 0;
 
 function createImage(src) {
   const image = new Image();
@@ -269,6 +322,16 @@ map.forEach((row, i) => {
           })
         );
         break;
+      case '.':
+        pellets.push(
+          new Pellet({
+            position: {
+              x: Boundary.width * j + Boundary.width / 2,
+              y: Boundary.height * i + Boundary.height / 2,
+            },
+          })
+        );
+        break;
     }
   });
 });
@@ -377,6 +440,23 @@ function animate() {
     }
   }
 
+  // touch pellets
+  for (let i = pellets.length - 1; 0 < i; i--) {
+    const pellet = pellets[i];
+    pellet.draw();
+    if (
+      Math.hypot(
+        pellet.position.x - player.position.x,
+        pellet.position.y - player.position.y
+      ) <
+      pellet.radius + player.radius
+    ) {
+      pellets.splice(i, 1);
+      score += 1;
+      scoreEl.innerHTML = score;
+    }
+  }
+
   boundaries.forEach((boundary) => {
     boundary.draw();
     if (circleCollidesWithRectangle({ circle: player, rectangle: boundary })) {
@@ -386,6 +466,10 @@ function animate() {
   });
 
   player.update();
+
+  ghosts.forEach((ghost) => {
+    ghost.update();
+  });
 }
 
 animate();

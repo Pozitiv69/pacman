@@ -1,4 +1,5 @@
 import map from './map.js';
+// import Boundary from './classes/Boundary.js';
 
 const canvas = document.querySelector('canvas');
 const scoreEl = document.querySelector('#scoreEl');
@@ -51,6 +52,7 @@ class Ghost {
     this.velocity = velocity;
     this.radius = 15;
     this.color = color;
+    this.prevCollisions = [];
   }
 
   draw() {
@@ -88,11 +90,11 @@ const boundaries = [];
 const ghosts = [
   new Ghost({
     position: {
-      x: Boundary.width * 9 + Boundary.width / 2,
+      x: Boundary.width * 10 + Boundary.width / 2,
       y: Boundary.height + Boundary.height / 2,
     },
     velocity: {
-      x: 0,
+      x: 5,
       y: 0,
     },
   }),
@@ -469,6 +471,110 @@ function animate() {
 
   ghosts.forEach((ghost) => {
     ghost.update();
+
+    const collisions = [];
+
+    boundaries.forEach((boundary) => {
+      if (
+        !collisions.includes('right') &&
+        circleCollidesWithRectangle({
+          circle: {
+            ...ghost,
+            velocity: {
+              x: 5,
+              y: 0,
+            },
+          },
+          rectangle: boundary,
+        })
+      ) {
+        collisions.push('right');
+      }
+      if (
+        !collisions.includes('left') &&
+        circleCollidesWithRectangle({
+          circle: {
+            ...ghost,
+            velocity: {
+              x: -5,
+              y: 0,
+            },
+          },
+          rectangle: boundary,
+        })
+      ) {
+        collisions.push('left');
+      }
+      if (
+        !collisions.includes('up') &&
+        circleCollidesWithRectangle({
+          circle: {
+            ...ghost,
+            velocity: {
+              x: 0,
+              y: -5,
+            },
+          },
+          rectangle: boundary,
+        })
+      ) {
+        collisions.push('up');
+      }
+      if (
+        !collisions.includes('down') &&
+        circleCollidesWithRectangle({
+          circle: {
+            ...ghost,
+            velocity: {
+              x: 0,
+              y: 5,
+            },
+          },
+          rectangle: boundary,
+        })
+      ) {
+        collisions.push('down');
+      }
+    });
+
+    if (collisions.length > ghost.prevCollisions.length)
+      ghost.prevCollisions = collisions;
+
+    if (JSON.stringify(collisions) !== JSON.stringify(ghost.prevCollisions)) {
+      if (ghost.velocity.x > 0) ghost.prevCollisions.push('right');
+      else if (ghost.velocity.x < 0) ghost.prevCollisions.push('left');
+      else if (ghost.velocity.y < 0) ghost.prevCollisions.push('up');
+      else if (ghost.velocity.y > 0) ghost.prevCollisions.push('down');
+
+      const pathways = ghost.prevCollisions.filter((collision) => {
+        return !collisions.includes(collision);
+      });
+
+      const direction = pathways[Math.floor(Math.random() * pathways.length)];
+
+      switch (direction) {
+        case 'down':
+          ghost.velocity.y = 5;
+          ghost.velocity.x = 0;
+          break;
+
+        case 'up':
+          ghost.velocity.y = -5;
+          ghost.velocity.x = 0;
+          break;
+
+        case 'right':
+          ghost.velocity.y = 0;
+          ghost.velocity.x = 5;
+          break;
+
+        case 'left':
+          ghost.velocity.y = 0;
+          ghost.velocity.x = -5;
+          break;
+      }
+      ghost.prevCollisions = [];
+    }
   });
 }
 
